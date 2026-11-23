@@ -214,10 +214,10 @@ footer.note { max-width: 720px; margin: 40px auto 0; font-size: .8rem; color: va
 (function () {
   /* ---- Server settings: change these to match your backend ---- */
   const API = {
-    base: "",                 // "" = same site as this page, or e.g. "https://api.example.com"
+    base: "http://localhost:8080",                 // "" = same site as this page, or e.g. "https://api.example.com"
     me: "/api/me",            // GET  -> { "username": "sam" }  or 401 when signed out
-    login: "/api/login",      // POST form fields: username, password -> { "username": "sam" }
-    logout: "/api/logout",    // POST -> 204
+    login: "/user/login",      // POST form fields: username, password -> { "username": "sam" }
+    logout: "/user/logout",    // POST -> 204
     shorten: "/api/shorten"   // POST form fields: url, prefix (prefix only when signed in) -> { "short_url": "https://hopl.to/acme/k7Qp2x", "code": "k7Qp2x", "prefix": "acme", "url": "https://..." }
   };
   /* Login is kept in a session cookie the server sets; the page sends it with credentials: "include". */
