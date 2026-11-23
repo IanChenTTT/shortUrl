@@ -213,17 +213,24 @@ footer.note { max-width: 720px; margin: 40px auto 0; font-size: .8rem; color: va
 <script>
 (function () {
   /* ---- Server settings: change these to match your backend ---- */
-  const API = {
-    base: "http://localhost:8080",                 // "" = same site as this page, or e.g. "https://api.example.com"
-    me: "/api/me",            // GET  -> { "username": "sam" }  or 401 when signed out
-    login: "/user/login",      // POST form fields: username, password -> { "username": "sam" }
-    logout: "/user/logout",    // POST -> 204
+  var API = {
+    base: "",                 // "" = same site as this page, or e.g. "https://api.example.com"
+    me: "/user/me",            // GET (Bearer token) -> { "username": "sam" }  or 401 when signed out
+    login: "/user/login",      // POST form fields: username, password -> { "username": "sam", "token": "..." }
+    logout: "/user/logout",    // POST (Bearer token) -> 204
     shorten: "/api/shorten"   // POST form fields: url, prefix (prefix only when signed in) -> { "short_url": "https://hopl.to/acme/k7Qp2x", "code": "k7Qp2x", "prefix": "acme", "url": "https://..." }
   };
-  /* Login is kept in a session cookie the server sets; the page sends it with credentials: "include". */
+  /* Login returns a token. The page keeps it in localStorage and sends it as "Authorization: Bearer <token>". */
 
   var HOST = "hopl.to";
   var session = null;      // username when signed in
+  var token = null;        // bearer token from /api/login, kept in this browser
+  try { token = localStorage.getItem("hopl_token"); } catch (e) {}
+  function setToken(t) {
+    token = t || null;
+    try { if (t) localStorage.setItem("hopl_token", t); else localStorage.removeItem("hopl_token"); } catch (e) {}
+  }
+  function authHeaders(h) { if (token) h["Authorization"] = "Bearer " + token; return h; }
   var links = [];          // links made during this visit
   var lastLink = null;
 
@@ -232,8 +239,7 @@ footer.note { max-width: 720px; margin: 40px auto 0; font-size: .8rem; color: va
   function post(path, fields) {
     return fetch(API.base + path, {
       method: "POST",
-      credentials: "include",
-      headers: { "Content-Type": "application/x-www-form-urlencoded", "Accept": "application/json" },
+      headers: authHeaders({ "Content-Type": "application/x-www-form-urlencoded", "Accept": "application/json" }),
       body: new URLSearchParams(fields).toString()
     }).then(function (res) {
       return res.text().then(function (txt) {
@@ -263,7 +269,7 @@ footer.note { max-width: 720px; margin: 40px auto 0; font-size: .8rem; color: va
       who.appendChild(av); who.appendChild(nm);
       var out = document.createElement("button"); out.className = "btn"; out.textContent = "Log out";
       out.onclick = function () {
-        post(API.logout, {}).catch(function () {}).then(function () { session = null; lastLink = null; render(); });
+        post(API.logout, {}).catch(function () {}).then(function () { setToken(null); session = null; lastLink = null; render(); });
       };
       el.appendChild(who); el.appendChild(out);
     } else {
@@ -370,7 +376,7 @@ footer.note { max-width: 720px; margin: 40px auto 0; font-size: .8rem; color: va
       };
       links.unshift(l); lastLink = l; render();
     }).catch(function (ex) {
-      if (ex.status === 401) { session = null; render(); err.textContent = "Your login expired. Log in again to use a prefix."; }
+      if (ex.status === 401) { setToken(null); session = null; render(); err.textContent = "Your login expired. Log in again to use a prefix."; }
       else err.textContent = ex.message;
     }).then(function () { busy = false; btn.disabled = false; btn.textContent = "Shorten link"; });
   });
@@ -393,7 +399,7 @@ footer.note { max-width: 720px; margin: 40px auto 0; font-size: .8rem; color: va
     if (!name || !pw) { er.textContent = "Enter your username and password."; return; }
     var go = $("authGo"); go.disabled = true; go.textContent = "Logging in...";
     post(API.login, { username: name, password: pw }).then(function (data) {
-      session = data.username || name; lastLink = null;
+      setToken(data.token); session = data.username || name; lastLink = null;
       $("uName").value = ""; closeAuth(); render();
     }).catch(function (ex) {
       er.textContent = ex.status === 401 ? "Username or password is wrong." : ex.message;
@@ -403,10 +409,12 @@ footer.note { max-width: 720px; margin: 40px auto 0; font-size: .8rem; color: va
   render();
 
   /* If the visitor already has a login cookie, restore it quietly. */
-  fetch(API.base + API.me, { credentials: "include", headers: { "Accept": "application/json" } })
-    .then(function (res) { return res.ok ? res.json() : null; })
-    .then(function (data) { if (data && data.username) { session = data.username; render(); } })
-    .catch(function () {});
+  if (token) {
+    fetch(API.base + API.me, { headers: authHeaders({ "Accept": "application/json" }) })
+      .then(function (res) { if (res.status === 401) setToken(null); return res.ok ? res.json() : null; })
+      .then(function (data) { if (data && data.username) { session = data.username; render(); } })
+      .catch(function () {});
+  }
 })();
 </script>
 </body>

@@ -1,3 +1,5 @@
 PORT=8080
 HOST=localhost
-
+DB=short
+SESSION_LIFE=6*time.Hour
+VER=test
