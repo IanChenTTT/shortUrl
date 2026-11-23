@@ -1,0 +1,413 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Hopl</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&family=Space+Grotesk:wght@500;600;700&display=swap">
+<style>
+/* Layout: sticky header with login on the right; one centered shortener panel; recent links below. */
+:root {
+  --bg: #f2f5f3;
+  --surface: #ffffff;
+  --fg: #13201a;
+  --muted: #5b6b63;
+  --line: #d6dfda;
+  --accent: #0b6e4f;
+  --accent-fg: #ffffff;
+  --accent-soft: #dcefe6;
+  --warn: #9a4b00;
+  --danger: #b3261e;
+  --font-display: "Space Grotesk", "Segoe UI", system-ui, sans-serif;
+  --font-body: "Inter", "Segoe UI", system-ui, sans-serif;
+  --font-mono: "JetBrains Mono", ui-monospace, Menlo, Consolas, monospace;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #0d1511; --surface: #141f19; --fg: #e5eee9; --muted: #93a79c; --line: #263a30;
+    --accent: #4fd1a1; --accent-fg: #06251a; --accent-soft: #17382b; --warn: #f0b36b; --danger: #ff8a80;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #0d1511; --surface: #141f19; --fg: #e5eee9; --muted: #93a79c; --line: #263a30;
+  --accent: #4fd1a1; --accent-fg: #06251a; --accent-soft: #17382b; --warn: #f0b36b; --danger: #ff8a80;
+  color-scheme: dark;
+}
+[hidden] { display: none !important; }
+body { margin: 0; }
+* { box-sizing: border-box; }
+body {
+  background: var(--bg); color: var(--fg); font-family: var(--font-body); font-size: 16px; line-height: 1.5;
+}
+body::before {
+  content: ""; position: fixed; inset: 0 0 auto; height: env(safe-area-inset-top, 0px); z-index: 30; background: var(--surface);
+}
+.wrap {
+  width: 100%; max-width: 1040px; margin-inline: auto;
+  padding-left: max(16px, env(safe-area-inset-left, 0px));
+  padding-right: max(16px, env(safe-area-inset-right, 0px));
+}
+header.top {
+  position: sticky; top: env(safe-area-inset-top, 0px); z-index: 20;
+  background: var(--surface); border-bottom: 1px solid var(--line);
+}
+header.top .wrap { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding-block: 12px; }
+.brand { font-family: var(--font-display); font-weight: 700; font-size: 1.35rem; letter-spacing: -0.02em; display: flex; align-items: center; gap: 8px; }
+.brand-mark { width: 26px; height: 26px; flex: none; }
+.brand small { font-family: var(--font-mono); font-weight: 400; font-size: .75rem; color: var(--muted); }
+.acct { display: flex; align-items: center; gap: 10px; min-width: 0; }
+.who { display: flex; align-items: center; gap: 8px; min-width: 0; font-size: .9rem; }
+.who .avatar {
+  width: 30px; height: 30px; border-radius: 50%; background: var(--accent-soft); color: var(--accent);
+  display: grid; place-items: center; font-family: var(--font-display); font-weight: 700; flex: none;
+}
+.who span.nm { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 24vw; }
+button { font: inherit; cursor: pointer; }
+.btn {
+  border: 1px solid var(--line); background: transparent; color: var(--fg); padding: 8px 14px; border-radius: 8px; font-weight: 500;
+}
+.btn:hover { border-color: var(--accent); }
+.btn.primary { background: var(--accent); color: var(--accent-fg); border-color: var(--accent); }
+.btn.primary:hover { filter: brightness(1.08); }
+:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+main { padding-block: clamp(28px, 8vh, 84px) 56px; }
+.hero { max-width: 720px; margin-inline: auto; }
+h1 { font-family: var(--font-display); font-size: clamp(2rem, 5.5vw, 3.2rem); line-height: 1.05; letter-spacing: -0.03em; margin: 0 0 10px; text-wrap: balance; }
+.lede { color: var(--muted); margin: 0 0 24px; max-width: 56ch; }
+.panel { background: var(--surface); border: 1px solid var(--line); border-radius: 14px; padding: clamp(16px, 3vw, 24px); }
+form.shorten { display: grid; gap: 14px; }
+label.lbl { display: block; font-size: .8rem; font-weight: 600; letter-spacing: .04em; text-transform: uppercase; color: var(--muted); margin-bottom: 6px; }
+input[type=text], input[type=password], input[type=url] {
+  width: 100%; font: inherit; color: var(--fg); background: var(--bg); border: 1px solid var(--line); border-radius: 8px; padding: 11px 12px; min-width: 0;
+}
+input::placeholder { color: var(--muted); opacity: .8; }
+input:read-only { cursor: pointer; }
+.row { display: grid; grid-template-columns: 1fr auto; gap: 10px; align-items: end; }
+.prefix-box { display: flex; align-items: center; gap: 0; border: 1px solid var(--line); border-radius: 8px; background: var(--bg); min-width: 0; }
+.prefix-box:focus-within { outline: 2px solid var(--accent); }
+.prefix-box .host { font-family: var(--font-mono); font-size: .9rem; color: var(--muted); padding-left: 12px; white-space: nowrap; }
+.prefix-box input { border: 0; background: transparent; padding-left: 2px; font-family: var(--font-mono); outline: none; }
+.prefix-box .slash { font-family: var(--font-mono); color: var(--muted); padding-right: 12px; }
+.hint { font-size: .85rem; color: var(--muted); margin: 6px 0 0; }
+.hint button { background: none; border: 0; padding: 0; color: var(--accent); font-weight: 600; text-decoration: underline; }
+.err { color: var(--danger); font-size: .9rem; min-height: 1.3em; margin: 0; }
+.result {
+  margin-top: 16px; padding: 14px; border-radius: 10px; background: var(--accent-soft); display: grid; gap: 6px;
+}
+.result .cap { font-size: .75rem; font-weight: 600; letter-spacing: .05em; text-transform: uppercase; color: var(--accent); }
+.result .line { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
+.short { font-family: var(--font-mono); font-size: clamp(1rem, 3.6vw, 1.3rem); font-weight: 500; overflow-wrap: anywhere; flex: 1 1 200px; min-width: 0; }
+.short .pfx { color: var(--accent); }
+.result .orig { font-size: .85rem; color: var(--muted); overflow-wrap: anywhere; }
+
+section.recent { max-width: 720px; margin: 32px auto 0; }
+section.recent h2 { font-family: var(--font-display); font-size: 1.1rem; margin: 0 0 10px; display: flex; justify-content: space-between; align-items: baseline; gap: 8px; }
+section.recent h2 span { font-family: var(--font-body); font-size: .85rem; font-weight: 400; color: var(--muted); }
+ul.links { list-style: none; margin: 0; padding: 0; display: grid; gap: 8px; }
+ul.links li { background: var(--surface); border: 1px solid var(--line); border-radius: 10px; padding: 10px 12px; display: grid; grid-template-columns: 1fr auto; gap: 4px 10px; align-items: center; }
+ul.links .s { font-family: var(--font-mono); font-size: .92rem; overflow-wrap: anywhere; min-width: 0; }
+ul.links .s .pfx { color: var(--accent); }
+ul.links .o { grid-column: 1; font-size: .8rem; color: var(--muted); overflow-wrap: anywhere; min-width: 0; }
+ul.links .o a { color: inherit; }
+ul.links .acts { grid-column: 2; grid-row: 1 / span 2; display: flex; gap: 6px; }
+.mini { border: 1px solid var(--line); background: transparent; color: var(--fg); border-radius: 6px; padding: 4px 9px; font-size: .8rem; }
+.mini:hover { border-color: var(--accent); }
+.mini.del:hover { border-color: var(--danger); color: var(--danger); }
+.empty { border: 1px dashed var(--line); border-radius: 10px; padding: 18px; color: var(--muted); text-align: center; font-size: .92rem; }
+footer.note { max-width: 720px; margin: 40px auto 0; font-size: .8rem; color: var(--muted); }
+
+.overlay { position: fixed; inset: 0; z-index: 40; background: rgba(8, 14, 11, .55); display: grid; place-items: center; padding: 16px; }
+.modal { width: 100%; max-width: 380px; background: var(--surface); border: 1px solid var(--line); border-radius: 14px; padding: 20px; display: grid; gap: 14px; }
+.modal h3 { font-family: var(--font-display); font-size: 1.3rem; margin: 0; }
+.tabs { display: flex; gap: 6px; background: var(--bg); padding: 4px; border-radius: 9px; }
+.tabs button { flex: 1; border: 0; background: transparent; color: var(--muted); padding: 7px; border-radius: 6px; font-weight: 600; }
+.tabs button[aria-selected="true"] { background: var(--surface); color: var(--fg); box-shadow: 0 0 0 1px var(--line); }
+.modal form { display: grid; gap: 12px; }
+.modal .foot { display: flex; gap: 8px; justify-content: flex-end; }
+.toast { position: fixed; left: 50%; transform: translateX(-50%); bottom: calc(18px + env(safe-area-inset-bottom, 0px)); background: var(--fg); color: var(--bg); padding: 9px 16px; border-radius: 8px; font-size: .9rem; z-index: 50; }
+@media (max-width: 520px) {
+  .row { grid-template-columns: 1fr; }
+  .row .btn { width: 100%; }
+  .brand small { display: none; }
+  .who span.nm { display: none; }
+}
+@media (prefers-reduced-motion: no-preference) {
+  .btn { transition: border-color .15s, filter .15s; }
+}
+</style>
+</head>
+<body>
+
+<header class="top">
+  <div class="wrap">
+    <div class="brand">
+      <svg class="brand-mark" viewBox="0 0 26 26" aria-hidden="true"><rect x="1" y="1" width="24" height="24" rx="7" fill="var(--accent)"/><path d="M7 15.5 12 10.5 14.5 13 19 8.5" fill="none" stroke="var(--accent-fg)" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/><path d="M15 8.5h4v4" fill="none" stroke="var(--accent-fg)" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      Hopl <small>hopl.to</small>
+    </div>
+    <div class="acct" id="acct"></div>
+  </div>
+</header>
+
+<main class="wrap">
+  <div class="hero">
+    <h1>Short links that look like yours.</h1>
+    <p class="lede">Paste a long address and get a short one. No account needed. Log in only if you want your own prefix, like hopl.to/<b>acme</b>/launch.</p>
+
+    <div class="panel">
+      <form class="shorten" id="shortenForm" method="post" action="/api/shorten" novalidate>
+        <div>
+          <label class="lbl" for="longUrl">Long URL</label>
+          <input type="text" id="longUrl" inputmode="url" autocomplete="off" placeholder="https://example.com/a/very/long/path?with=parameters" />
+        </div>
+        <div>
+          <label class="lbl" for="prefix">Prefix <span style="text-transform:none;letter-spacing:0;font-weight:400">(optional)</span></label>
+          <div class="prefix-box">
+            <span class="host">hopl.to/</span>
+            <input type="text" id="prefix" autocomplete="off" placeholder="acme" maxlength="20" />
+            <span class="slash">/</span>
+          </div>
+          <p class="hint" id="prefixHint"></p>
+        </div>
+        <div class="row">
+          <p class="err" id="err" role="alert"></p>
+          <button class="btn primary" type="submit" id="shortenBtn">Shorten link</button>
+        </div>
+      </form>
+      <div class="result" id="result" hidden>
+        <span class="cap">Your short link</span>
+        <div class="line">
+          <div class="short" id="shortOut"></div>
+          <button class="btn" id="copyBtn" type="button">Copy</button>
+        </div>
+        <div class="orig" id="origOut"></div>
+      </div>
+    </div>
+  </div>
+
+  <section class="recent">
+    <h2 id="recentTitle">Recent links <span id="recentSub"></span></h2>
+    <ul class="links" id="linkList"></ul>
+  </section>
+
+  <footer class="note">Links and logins are handled by your server. See the settings at the top of the script to point this page at your endpoints.</footer>
+</main>
+
+<div class="overlay" id="overlay" hidden>
+  <div class="modal" role="dialog" aria-modal="true" aria-labelledby="mTitle">
+    <h3 id="mTitle">Log in for a custom prefix</h3>
+    <form id="authForm" method="post" action="/api/login" novalidate>
+      <div><label class="lbl" for="uName">Username</label><input type="text" id="uName" autocomplete="username" maxlength="24" /></div>
+      <div><label class="lbl" for="uPass">Password</label><input type="password" id="uPass" autocomplete="current-password" /></div>
+      <p class="err" id="authErr" role="alert"></p>
+      <div class="foot">
+        <button type="button" class="btn" id="authCancel">Cancel</button>
+        <button type="submit" class="btn primary" id="authGo">Log in</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<script>
+(function () {
+  /* ---- Server settings: change these to match your backend ---- */
+  const API = {
+    base: "",                 // "" = same site as this page, or e.g. "https://api.example.com"
+    me: "/api/me",            // GET  -> { "username": "sam" }  or 401 when signed out
+    login: "/api/login",      // POST form fields: username, password -> { "username": "sam" }
+    logout: "/api/logout",    // POST -> 204
+    shorten: "/api/shorten"   // POST form fields: url, prefix (prefix only when signed in) -> { "short_url": "https://hopl.to/acme/k7Qp2x", "code": "k7Qp2x", "prefix": "acme", "url": "https://..." }
+  };
+  /* Login is kept in a session cookie the server sets; the page sends it with credentials: "include". */
+
+  var HOST = "hopl.to";
+  var session = null;      // username when signed in
+  var links = [];          // links made during this visit
+  var lastLink = null;
+
+  var $ = function (id) { return document.getElementById(id); };
+
+  function post(path, fields) {
+    return fetch(API.base + path, {
+      method: "POST",
+      credentials: "include",
+      headers: { "Content-Type": "application/x-www-form-urlencoded", "Accept": "application/json" },
+      body: new URLSearchParams(fields).toString()
+    }).then(function (res) {
+      return res.text().then(function (txt) {
+        var data = null;
+        try { data = txt ? JSON.parse(txt) : null; } catch (e) {}
+        if (!res.ok) {
+          var msg = (data && (data.error || data.message)) || "Something went wrong (" + res.status + "). Try again.";
+          var err = new Error(msg); err.status = res.status; throw err;
+        }
+        return data || {};
+      });
+    }, function () { throw new Error("Can't reach the server. Check your connection and try again."); });
+  }
+
+  function toast(msg) {
+    var t = document.createElement("div");
+    t.className = "toast"; t.textContent = msg; document.body.appendChild(t);
+    setTimeout(function () { t.remove(); }, 1800);
+  }
+
+  function renderAcct() {
+    var el = $("acct"); el.textContent = "";
+    if (session) {
+      var who = document.createElement("div"); who.className = "who";
+      var av = document.createElement("div"); av.className = "avatar"; av.textContent = session.charAt(0).toUpperCase();
+      var nm = document.createElement("span"); nm.className = "nm"; nm.textContent = session;
+      who.appendChild(av); who.appendChild(nm);
+      var out = document.createElement("button"); out.className = "btn"; out.textContent = "Log out";
+      out.onclick = function () {
+        post(API.logout, {}).catch(function () {}).then(function () { session = null; lastLink = null; render(); });
+      };
+      el.appendChild(who); el.appendChild(out);
+    } else {
+      var li = document.createElement("button"); li.className = "btn primary"; li.textContent = "Log in";
+      li.onclick = openAuth;
+      el.appendChild(li);
+    }
+  }
+
+  function renderPrefix() {
+    var p = $("prefix"), hint = $("prefixHint");
+    hint.textContent = "";
+    if (session) {
+      p.readOnly = false;
+      hint.textContent = "Letters, numbers, dashes and underscores, 2 to 20 characters.";
+    } else {
+      p.readOnly = true; p.value = "";
+      hint.textContent = "No account needed to shorten a link. Click the prefix box to log in and add your own.";
+    }
+  }
+
+  function shortText(l) { return (l.short_url || "").replace(/^https?:\/\//i, ""); }
+  function shortNode(l, parent) {
+    parent.textContent = "";
+    var text = shortText(l);
+    var mark = l.prefix ? "/" + l.prefix + "/" : null;
+    var i = mark ? text.indexOf(mark) : -1;
+    if (i < 0) { parent.appendChild(document.createTextNode(text)); return; }
+    parent.appendChild(document.createTextNode(text.slice(0, i + 1)));
+    var s = document.createElement("span"); s.className = "pfx"; s.textContent = l.prefix + "/";
+    parent.appendChild(s);
+    parent.appendChild(document.createTextNode(text.slice(i + mark.length)));
+  }
+
+  function copy(text) {
+    var done = function () { toast("Copied"); };
+    var fallback = function () {
+      var ta = document.createElement("textarea"); ta.value = text; document.body.appendChild(ta); ta.select();
+      try { document.execCommand("copy"); done(); } catch (e) { toast("Select and copy the link"); }
+      ta.remove();
+    };
+    try { navigator.clipboard.writeText(text).then(done, fallback); } catch (e) { fallback(); }
+  }
+
+  function renderResult() {
+    var r = $("result");
+    if (!lastLink) { r.hidden = true; return; }
+    r.hidden = false;
+    shortNode(lastLink, $("shortOut"));
+    $("origOut").textContent = "Points to " + lastLink.url;
+  }
+
+  function renderList() {
+    var ul = $("linkList"); ul.textContent = "";
+    $("recentSub").textContent = "From this visit";
+    if (!links.length) {
+      var e = document.createElement("li"); e.className = "empty"; e.style.display = "block";
+      e.textContent = "No links yet. Shorten your first one above and it shows up here.";
+      ul.appendChild(e); return;
+    }
+    links.slice(0, 12).forEach(function (l) {
+      var li = document.createElement("li");
+      var s = document.createElement("div"); s.className = "s"; shortNode(l, s);
+      var o = document.createElement("div"); o.className = "o";
+      var a = document.createElement("a"); a.href = l.url; a.target = "_blank"; a.rel = "noopener noreferrer"; a.textContent = l.url;
+      o.appendChild(a);
+      var acts = document.createElement("div"); acts.className = "acts";
+      var c = document.createElement("button"); c.className = "mini"; c.textContent = "Copy";
+      c.onclick = function () { copy(l.short_url); };
+      acts.appendChild(c);
+      li.appendChild(s); li.appendChild(o); li.appendChild(acts);
+      ul.appendChild(li);
+    });
+  }
+
+  function render() { renderAcct(); renderPrefix(); renderResult(); renderList(); }
+
+  function normalizeUrl(v) {
+    v = v.trim(); if (!v) return null;
+    if (!/^[a-z][a-z0-9+.-]*:\/\//i.test(v)) v = "https://" + v;
+    try { var u = new URL(v); if (!/^https?:$/.test(u.protocol) || u.hostname.indexOf(".") < 0) return null; return u.href; } catch (e) { return null; }
+  }
+
+  var busy = false;
+  $("shortenForm").addEventListener("submit", function (e) {
+    e.preventDefault();
+    if (busy) return;
+    var err = $("err"); err.textContent = "";
+    var url = normalizeUrl($("longUrl").value);
+    if (!url) { err.textContent = "Enter a full web address, for example https://example.com/page."; return; }
+    var fields = { url: url };
+    if (session) {
+      var prefix = $("prefix").value.trim().toLowerCase();
+      if (prefix && !/^[a-z0-9_-]{2,20}$/.test(prefix)) { err.textContent = "Prefix must be 2 to 20 letters, numbers, dashes or underscores."; return; }
+      if (prefix) fields.prefix = prefix;
+    }
+    busy = true; var btn = $("shortenBtn"); btn.disabled = true; btn.textContent = "Shortening...";
+    post(API.shorten, fields).then(function (data) {
+      var l = {
+        url: data.url || url,
+        prefix: data.prefix || fields.prefix || "",
+        code: data.code || "",
+        short_url: data.short_url || ("https://" + HOST + "/" + (data.prefix ? data.prefix + "/" : "") + (data.code || ""))
+      };
+      links.unshift(l); lastLink = l; render();
+    }).catch(function (ex) {
+      if (ex.status === 401) { session = null; render(); err.textContent = "Your login expired. Log in again to use a prefix."; }
+      else err.textContent = ex.message;
+    }).then(function () { busy = false; btn.disabled = false; btn.textContent = "Shorten link"; });
+  });
+
+  function askLogin(e) { if (!session) { e.preventDefault(); $("prefix").blur(); openAuth(); } }
+  $("prefix").addEventListener("focus", askLogin);
+  $("prefix").addEventListener("click", askLogin);
+
+  $("copyBtn").onclick = function () { if (lastLink) copy(lastLink.short_url); };
+
+  function openAuth() { $("overlay").hidden = false; $("uName").focus(); }
+  function closeAuth() { $("overlay").hidden = true; $("prefix").blur(); $("uPass").value = ""; $("authErr").textContent = ""; }
+  $("authCancel").onclick = closeAuth;
+  $("overlay").addEventListener("click", function (e) { if (e.target === $("overlay")) closeAuth(); });
+  document.addEventListener("keydown", function (e) { if (e.key === "Escape" && !$("overlay").hidden) closeAuth(); });
+
+  $("authForm").addEventListener("submit", function (e) {
+    e.preventDefault();
+    var name = $("uName").value.trim(), pw = $("uPass").value, er = $("authErr");
+    if (!name || !pw) { er.textContent = "Enter your username and password."; return; }
+    var go = $("authGo"); go.disabled = true; go.textContent = "Logging in...";
+    post(API.login, { username: name, password: pw }).then(function (data) {
+      session = data.username || name; lastLink = null;
+      $("uName").value = ""; closeAuth(); render();
+    }).catch(function (ex) {
+      er.textContent = ex.status === 401 ? "Username or password is wrong." : ex.message;
+    }).then(function () { go.disabled = false; go.textContent = "Log in"; });
+  });
+
+  render();
+
+  /* If the visitor already has a login cookie, restore it quietly. */
+  fetch(API.base + API.me, { credentials: "include", headers: { "Accept": "application/json" } })
+    .then(function (res) { return res.ok ? res.json() : null; })
+    .then(function (data) { if (data && data.username) { session = data.username; render(); } })
+    .catch(function () {});
+})();
+</script>
+</body>
+</html>
